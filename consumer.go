@@ -3,7 +3,7 @@ package rabbitmq
 import (
 	"fmt"
 	amqp "github.com/rabbitmq/amqp091-go"
-	"log"
+	logging "gitlab.gid.team/gid-pro/backend/libs/logger/v2"
 	"time"
 )
 
@@ -69,14 +69,14 @@ func (r *rabbitMQConsumer) Consume(target string) (<-chan Message, error) {
 					Body: message.Body,
 				}
 			case <-r.reconnectCh:
-				log.Print("Start to reconsume messages")
+				logging.Info("start to reconsume messages")
 				for {
 					messages, err = r.consume(target)
 					if err == nil {
 						break
 					}
 
-					log.Printf("failed to reconsume messages due %v", err)
+					logging.Errorf("failed to reconsume messages due %v", err)
 				}
 			case <-r.done:
 				close(ch)
