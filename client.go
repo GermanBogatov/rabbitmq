@@ -13,7 +13,8 @@ type MessageQueue interface {
 
 type Producer interface {
 	MessageQueue
-	Publish(ctx context.Context, exchange, target string, body []byte) error
+	Publish(ctx context.Context, target string, body []byte) error
+	PublishExchange(ctx context.Context, exchange, target string, body []byte) error
 }
 
 type Consumer interface {
