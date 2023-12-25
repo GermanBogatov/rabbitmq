@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	amqp "github.com/rabbitmq/amqp091-go"
-	"log"
+	logging "gitlab.gid.team/gid-pro/backend/libs/logger/v2"
 	"sync"
 	"time"
 )
@@ -97,13 +97,13 @@ func (r *rabbitMQBase) handleReconnect(addr string) {
 				return
 			}
 
-			log.Print("Trying to reconnect to RabbitMQ...")
+			logging.Info("trying to reconnect to RabbitMQ...")
 			for !r.boolConnect(addr) {
-				log.Print("Failed to connect to RabbitMQ. Retrying...")
+				logging.Info("failed to connect to RabbitMQ. Retrying...")
 				time.Sleep(reconnectDelay)
 			}
 
-			log.Print("send signal about successfully reconnect to RabbitMQ")
+			logging.Info("send signal about successfully reconnect to RabbitMQ")
 			for _, ch := range r.reconnects {
 				ch <- true
 			}
@@ -140,7 +140,7 @@ func (r *rabbitMQBase) connect(addr string) error {
 	r.setConnected(true)
 
 	ch.NotifyClose(r.notifyClose)
-	log.Print("successfully connected to RabbitMQ")
+	logging.Info("successfully connected to RabbitMQ")
 
 	return nil
 }
