@@ -32,31 +32,7 @@ func NewRabbitMQProducer(cfg ProducerConfig) (Producer, error) {
 	return producer, nil
 }
 
-func (r *rabbitMQProducer) Publish(ctx context.Context, target string, body []byte) error {
-	if !r.Connected() {
-		return errNotConnected
-	}
-
-	err := r.ch.PublishWithContext(
-		ctx,
-		"",
-		target,
-		false,
-		false,
-		amqp.Publishing{
-			DeliveryMode: amqp.Persistent,
-			ContentType:  "text/plain",
-			Body:         body,
-		},
-	)
-	if err != nil {
-		return fmt.Errorf("failed to publish message due %v", err)
-	}
-
-	return nil
-}
-
-func (r *rabbitMQProducer) PublishExchange(ctx context.Context, exchange, target string, body []byte) error {
+func (r *rabbitMQProducer) Publish(ctx context.Context, exchange, target string, body []byte) error {
 	if !r.Connected() {
 		return errNotConnected
 	}

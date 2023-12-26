@@ -48,7 +48,6 @@ func (r *rabbitMQConsumer) Consume(target string) (<-chan Message, error) {
 	if !r.Connected() {
 		return nil, errNotConnected
 	}
-
 	messages, err := r.consume(target)
 	if err != nil {
 		return nil, fmt.Errorf("failed to consume messages due %v", err)
