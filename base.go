@@ -43,56 +43,56 @@ type rabbitMQBase struct {
 }
 
 /*
-DeclareQueue объявляет очередь для хранения сообщений и их доставки потребителям.
-Объявление создает очередь, если она еще не существует, или гарантирует, что
-существующая очередь соответствует тем же параметрам.
+DeclareQueue declares a queue to hold messages and deliver to consumers.
+Declaring creates a queue if it doesn't already exist, or ensures that an
+existing queue matches the same parameters.
 
-Каждая объявленная очередь получает привязку по умолчанию к пустому обмену "", который имеет
-тип «прямой» с ключом маршрутизации, соответствующим имени очереди. С этим
-привязка по умолчанию, можно публиковать сообщения, которые направляются непосредственно в
-эту очередь путем публикации в "" с ключом маршрутизации имени очереди.
+Every queue declared gets a default binding to the empty exchange "" which has
+the type "direct" with the routing key matching the queue's name.  With this
+default binding, it is possible to publish messages that route directly to
+this queue by publishing to "" with the routing key of the queue name.
 
-DeclareQueue("alerts", true, false, false, false, false)
-Publish("", "alerts", false, false, Publishing{Body: []byte("...")})
+	QueueDeclare("alerts", true, false, false, false, nil)
+	Publish("", "alerts", false, false, Publishing{Body: []byte("...")})
 
-доставка    ключ обмена    очередь
-----------------------------------------------
-ключ: alerts -> «» -> alerts -> alerts
+	Delivery       Exchange  Key       Queue
+	-----------------------------------------------
+	key: alerts -> ""     -> alerts -> alerts
 
-Имя очереди может быть пустым, в этом случае сервер сгенерирует уникальное имя.
-который будет возвращен в поле Name структуры Queue.
+The queue name may be empty, in which case the server will generate a unique name
+which will be returned in the Name field of Queue struct.
 
-Durable and Non-Auto-Deleted очереди сохранятся после перезапуска сервера.
-когда нет оставшихся потребителей или привязок. Постоянные публикации будут
-быть восстановлены в этой очереди при перезапуске сервера. Эти очереди могут быть только
-связаны с долгосрочным обменом.
+Durable and Non-Auto-Deleted queues will survive server restarts and remain
+when there are no remaining consumers or bindings.  Persistent publishings will
+be restored in this queue on server restart.  These queues are only able to be
+bound to durable exchanges.
 
-Non-Durable and Auto-Deleted очереди не будут переобъявляться при перезапуске сервера.
-и будет удален сервером через некоторое время, когда последний потребитель
-отменен или последний канал потребителя закрыт. Очереди с этим временем жизни
-также можно удалить обычным способом с помощью QueueDelete. Эти устойчивые очереди могут только
-быть привязаны к недолговечным обменам.
+Non-Durable and Auto-Deleted queues will not be redeclared on server restart
+and will be deleted by the server after a short time when the last consumer is
+canceled or the last consumer's channel is closed.  Queues with this lifetime
+can also be deleted normally with QueueDelete.  These durable queues can only
+be bound to non-durable exchanges.
 
-Очереди Non-Durable и Non-Auto-Deleted останутся объявленными до тех пор, пока
-сервер работает независимо от количества потребителей. Эта жизнь полезна
-для временных топологий, которые могут иметь длительные задержки между потребительскими действиями.
-Эти очереди могут быть привязаны только к недолговечным обменам.
+Non-Durable and Non-Auto-Deleted queues will remain declared as long as the
+server is running regardless of how many consumers.  This lifetime is useful
+for temporary topologies that may have long delays between consumer activity.
+These queues can only be bound to non-durable exchanges.
 
-Durable and Auto-Deleted очереди будут восстановлены при перезапуске сервера, но без
-активные потребители не выживут и будут удалены. Эта жизнь маловероятна
-быть полезным.
+Durable and Auto-Deleted queues will be restored on server restart, but without
+active consumers will not survive and be removed.  This Lifetime is unlikely
+to be useful.
 
-Эксклюзивные очереди доступны только тому соединению, которое их объявляет и
-будут удалены при закрытии соединения. Каналы на других соединениях
-получит сообщение об ошибке при попытке объявить, связать, использовать, очистить или
-удалить очередь с таким же именем.
+Exclusive queues are only accessible by the connection that declares them and
+will be deleted when the connection closes.  Channels on other connections
+will receive an error when attempting  to declare, bind, consume, purge or
+delete a queue with the same name.
 
-Если noWait имеет значение true, предполагается, что очередь объявлена на сервере. А
-исключение канала поступит, если условия для существующих очередей выполнены
-или попытка изменить существующую очередь из другого соединения.
+When noWait is true, the queue will assume to be declared on the server.  A
+channel exception will arrive if the conditions are met for existing queues
+or attempting to modify an existing queue from a different connection.
 
-Если возвращаемое значение ошибки не равно нулю, можно предположить, что очередь не может быть
-объявлен с этими параметрами, и канал будет закрыт.
+When the error return value is not nil, you can assume the queue could not be
+declared with these parameters, and the channel will be closed.
 */
 func (r *rabbitMQBase) DeclareQueue(name string, durable, autoDelete, exclusive, noWait bool, args map[string]interface{}) error {
 	if !r.Connected() {
@@ -114,56 +114,56 @@ func (r *rabbitMQBase) DeclareQueue(name string, durable, autoDelete, exclusive,
 }
 
 /*
-DeclareExchange объявляет обмен на сервере. Если обмен не состоится
-уже существует, сервер создаст его. Если обмен существует, сервер
-проверяет, что он имеет указанный тип, долговечность и флаги автоматического удаления.
+DeclareExchange declares an exchange on the server. If the exchange does not
+already exist, the server will create it.  If the exchange exists, the server
+verifies that it is of the provided type, durability and auto-delete flags.
 
-Ошибки, возвращаемые этим методом, закроют канал.
+Errors returned from this method will close the channel.
 
-Имена бирж, начинающиеся с «amq». зарезервированы для заранее объявленных и
-стандартизированные обмены. Клиент МОЖЕТ объявить обмен, начиная с
-"amq." если установлена пассивная опция или биржа уже существует. Имена могут
-состоять из непустой последовательности букв, цифр, дефиса, подчеркивания,
-точка или двоеточие.
+Exchange names starting with "amq." are reserved for pre-declared and
+standardized exchanges. The client MAY declare an exchange starting with
+"amq." if the passive option is set, or the exchange already exists.  Names can
+consist of a non-empty sequence of letters, digits, hyphen, underscore,
+period, or colon.
 
-Каждый обмен принадлежит к одному из набора видов/типов обмена, реализованных
-сервер. Типы обмена определяют функциональность обмена, т.е.
-как через него проходят сообщения. После объявления обмена его тип
-не может быть изменено. Распространенными типами являются "direct", "fanout", "topic" и
+Each exchange belongs to one of a set of exchange kinds/types implemented by
+the server. The exchange types define the functionality of the exchange - i.e.
+how messages are routed through it. Once an exchange is declared, its type
+cannot be changed.  The common types are "direct", "fanout", "topic" and
 "headers".
 
-Durable and Non-Auto-Deleted exchanges выдержат перезагрузку сервера и останутся
-объявляется, когда нет оставшихся привязок. Это лучшая жизнь для
-долгоживущие конфигурации обмена, такие как стабильные маршруты и обмены по умолчанию.
+Durable and Non-Auto-Deleted exchanges will survive server restarts and remain
+declared when there are no remaining bindings.  This is the best lifetime for
+long-lived exchange configurations like stable routes and default exchanges.
 
-Non-Durable and Auto-Deleted exchanges будут удаляться при отсутствии
-оставшиеся привязки и не восстанавливаются при перезапуске сервера. Эта жизнь
-полезно для временных топологий, которые не должны загрязнять виртуальный хост на
-сбой или после того, как потребители завершили работу.
+Non-Durable and Auto-Deleted exchanges will be deleted when there are no
+remaining bindings and not restored on server restart.  This lifetime is
+useful for temporary topologies that should not pollute the virtual host on
+failure or after the consumers have completed.
 
-Non-Durable and Non-Auto-deleted будут оставаться до тех пор, пока сервер
-работает в том числе и тогда, когда не осталось привязок. Это полезно для
-временные топологии, которые могут иметь длительные задержки между привязками.
+Non-Durable and Non-Auto-deleted exchanges will remain as long as the server is
+running including when there are no remaining bindings.  This is useful for
+temporary topologies that may have long delays between bindings.
 
-Durable and Auto-Deleted exchanges выдержат перезагрузку сервера и будут
-удаляется до и после перезапуска сервера, когда не осталось привязок.
-Эти обмены полезны для надежных временных топологий или когда вам требуется
-привязка устойчивых очередей к автоматически удаляемым обменам.
+Durable and Auto-Deleted exchanges will survive server restarts and will be
+removed before and after server restarts when there are no remaining bindings.
+These exchanges are useful for robust temporary topologies or when you require
+binding durable queues to auto-deleted exchanges.
 
-Примечание. RabbitMQ объявляет типы обмена по умолчанию, такие как «amq.fanout», как
-durable, поэтому очереди, которые привязываются к этим заранее объявленным обменам, также должны быть
-прочный.
+Note: RabbitMQ declares the default exchange types like 'amq.fanout' as
+durable, so queues that bind to these pre-declared exchanges must also be
+durable.
 
-Exchanges, объявленные «внутренними», не принимают публикации. Внутренний
-exchanges полезны, когда вы хотите реализовать топологии между обменами
-это не должно быть доступно пользователям брокера.
+Exchanges declared as `internal` do not accept publishings. Internal
+exchanges are useful when you wish to implement inter-exchange topologies
+that should not be exposed to users of the broker.
 
-Если noWait имеет значение true, объявляйте, не дожидаясь подтверждения от сервера.
-Канал может быть закрыт в результате ошибки. Добавьте прослушиватель NotifyClose
-реагировать на любые исключения.
+When noWait is true, declare without waiting for a confirmation from the server.
+The channel may be closed as a result of an error.  Add a NotifyClose listener
+to respond to any exceptions.
 
-Необязательный amqp. Таблица аргументов, специфичных для реализации сервера.
-обмен может быть отправлен для типов обмена, требующих дополнительных параметров.
+Optional amqp.Table of arguments that are specific to the server's implementation of
+the exchange can be sent for exchange types that require extra parameters.
 */
 func (r *rabbitMQBase) DeclareExchange(name, kind string, durable, autoDelete, internal, noWait bool, args map[string]interface{}) error {
 	if !r.Connected() {
@@ -191,12 +191,12 @@ func (r *rabbitMQBase) DeclareExchange(name, kind string, durable, autoDelete, i
 }
 
 /*
-DeclareQueueBind привязывает обмен к очереди, чтобы публикации на обмене
-направляться в очередь, когда ключ маршрутизации публикации соответствует привязке
-ключ маршрутизации.
+DeclareQueueBind binds an exchange to a queue so that publishings to the exchange will
+be routed to the queue when the publishing routing key matches the binding
+routing key.
 
-	DeclareQueueBind("pagers", "alert", "log", false, nil)
-	DeclareQueueBind("emails", "info", "log", false, nil)
+	QueueBind("pagers", "alert", "log", false, nil)
+	QueueBind("emails", "info", "log", false, nil)
 
 	Delivery       Exchange  Key       Queue
 	-----------------------------------------------
@@ -204,17 +204,17 @@ DeclareQueueBind привязывает обмен к очереди, чтобы
 	key: info ---> log ----> info ---> emails
 	key: debug --> log       (none)    (dropped)
 
-Если привязка с тем же ключом и аргументами уже существует между
-обмена и постановки в очередь, попытка перепривязки будет проигнорирована и существующие
-привязка сохранится.
+If a binding with the same key and arguments already exists between the
+exchange and queue, the attempt to rebind will be ignored and the existing
+binding will be retained.
 
-В случае, если несколько привязок могут привести к перенаправлению сообщения на
-той же очереди, сервер будет маршрутизировать публикацию только один раз. Это возможно
-с обменом темами.
+In the case that multiple bindings may cause the message to be routed to the
+same queue, the server will only route the publishing once.  This is possible
+with topic exchanges.
 
-	DeclareQueueBind("pagers", "alert", "amq.topic", false, nil)
-	DeclareQueueBind("emails", "info", "amq.topic", false, nil)
-	DeclareQueueBind("emails", "#", "amq.topic", false, nil) // match everything
+	QueueBind("pagers", "alert", "amq.topic", false, nil)
+	QueueBind("emails", "info", "amq.topic", false, nil)
+	QueueBind("emails", "#", "amq.topic", false, nil) // match everything
 
 	Delivery       Exchange        Key       Queue
 	-----------------------------------------------
@@ -223,15 +223,15 @@ DeclareQueueBind привязывает обмен к очереди, чтобы
 	                         \---> info ---/
 	key: debug --> amq.topic ----> # ------> emails
 
-Привязать устойчивую очередь к устойчивому обмену можно только независимо от
-удаляется ли очередь или обмен автоматически. Привязки между устойчивыми очередями
-и обмены также будут восстановлены при перезапуске сервера.
+It is only possible to bind a durable queue to a durable exchange regardless of
+whether the queue or exchange is auto-deleted.  Bindings between durable queues
+and exchanges will also be restored on server restart.
 
-Если привязка не может быть завершена, будет возвращена ошибка и канал
-будет закрыт.
+If the binding could not complete, an error will be returned and the channel
+will be closed.
 
-Если noWait имеет значение false и очередь не может быть привязана, канал будет
-закрыто с ошибкой.
+When noWait is false and the queue could not be bound, the channel will be
+closed with an error.
 */
 func (r *rabbitMQBase) DeclareQueueBind(name, key, exchange string, noWait bool, args map[string]interface{}) error {
 	if !r.Connected() {

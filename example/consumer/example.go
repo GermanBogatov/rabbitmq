@@ -34,26 +34,19 @@ func init() {
 }
 
 func main() {
-	consumer, err := rabbitmq.NewRabbitMQConsumer(rabbitmq.ConsumerConfig{
-		BaseConfig: rabbitmq.BaseConfig{
-			Host:     "localhost",
-			Port:     "5672",
-			Username: "guest",
-			Password: "guest",
-		},
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	var wg sync.WaitGroup
-	wg.Add(2)
-	err = exampleQueue(&wg, consumer)
+	wg.Add(3)
+	err := exampleQueue(&wg)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = exampleBinding(&wg, consumer)
+	err = exampleBindingFanout(&wg)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = exampleBindingDirect(&wg)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -61,30 +54,55 @@ func main() {
 	wg.Wait()
 }
 
-func exampleQueue(wg *sync.WaitGroup, consumer rabbitmq.Consumer) error {
-	err := consumer.DeclareQueue("test-queue", true, false, false, false, nil)
+func exampleQueue(wg *sync.WaitGroup) error {
+	consumer, err := rabbitmq.NewRabbitMQConsumer(rabbitmq.ConsumerConfig{
+		BaseConfig: rabbitmq.BaseConfig{
+			Host:     "localhost",
+			Port:     "5672",
+			Username: "guest",
+			Password: "guest",
+		},
+		Name: "name-consumer-1",
+	})
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	messages, err := consumer.Consume("test-queue", "", true, false, false, false, nil)
+	err = consumer.DeclareQueue("test-queue", true, false, false, false, nil)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	go func() {
+	messages, err := consumer.Consume("test-queue", true, false, false, false, nil)
+	if err != nil {
+		return err
+	}
+
+	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
 		for msg := range messages {
 			fmt.Printf("from exampleQueue: messageID=%v; message=%s \n", msg.ID, string(msg.Body))
 		}
-	}()
+	}(wg)
 
 	return nil
 }
 
-func exampleBinding(wg *sync.WaitGroup, consumer rabbitmq.Consumer) error {
+func exampleBindingFanout(wg *sync.WaitGroup) error {
+	consumer, err := rabbitmq.NewRabbitMQConsumer(rabbitmq.ConsumerConfig{
+		BaseConfig: rabbitmq.BaseConfig{
+			Host:     "localhost",
+			Port:     "5672",
+			Username: "guest",
+			Password: "guest",
+		},
+		Name: "name-consumer-2",
+	})
+	if err != nil {
+		return err
+	}
 
-	err := consumer.DeclareExchange(
+	err = consumer.DeclareExchange(
 		"logs",   // name
 		"fanout", // type
 		true,     // durable
@@ -121,17 +139,83 @@ func exampleBinding(wg *sync.WaitGroup, consumer rabbitmq.Consumer) error {
 		return err
 	}
 
-	messages, err := consumer.Consume("", "", true, false, false, false, nil)
+	messages, err := consumer.Consume("", true, false, false, false, nil)
 	if err != nil {
 		return err
 	}
 
-	go func() {
+	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
 		for msg := range messages {
-			fmt.Printf("from exampleBinding: messageID=%v; message=%s \n", msg.ID, string(msg.Body))
+			fmt.Printf("from exampleBindingFanout: messageID=%v; message=%s \n", msg.ID, string(msg.Body))
 		}
-	}()
+	}(wg)
+
+	return nil
+}
+
+func exampleBindingDirect(wg *sync.WaitGroup) error {
+	consumer, err := rabbitmq.NewRabbitMQConsumer(rabbitmq.ConsumerConfig{
+		BaseConfig: rabbitmq.BaseConfig{
+			Host:     "localhost",
+			Port:     "5672",
+			Username: "guest",
+			Password: "guest",
+		},
+		Name: "name-consumer-3",
+	})
+	if err != nil {
+		return err
+	}
+
+	err = consumer.DeclareExchange(
+		"direct-queue-exchange", // name
+		"direct",                // type
+		true,                    // durable
+		false,                   // auto-deleted
+		false,                   // internal
+		false,                   // no-wait
+		nil,                     // arguments
+	)
+
+	if err != nil {
+		return err
+	}
+
+	err = consumer.DeclareQueue(
+		"direct-queue", // name
+		false,          // durable
+		false,          // delete when unused
+		true,           // exclusive
+		false,          // no-wait
+		nil,            // arguments
+	)
+	if err != nil {
+		return err
+	}
+
+	err = consumer.DeclareQueueBind(
+		"direct-queue",          // queue name
+		"direct-queue",          // routing key
+		"direct-queue-exchange", // exchange
+		false,
+		nil,
+	)
+	if err != nil {
+		return err
+	}
+
+	messages, err := consumer.Consume("direct-queue", true, false, false, false, nil)
+	if err != nil {
+		return err
+	}
+
+	go func(wg *sync.WaitGroup) {
+		defer wg.Done()
+		for msg := range messages {
+			fmt.Printf("from exampleBindingDirect: messageID=%v; message=%s \n", msg.ID, string(msg.Body))
+		}
+	}(wg)
 
 	return nil
 }

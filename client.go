@@ -19,7 +19,7 @@ type Producer interface {
 
 type Consumer interface {
 	MessageQueue
-	Consume(queue, consumer string, autoAck, exclusive, noLocal, noWait bool, args map[string]interface{}) (<-chan Message, error)
+	Consume(queue string, autoAck, exclusive, noLocal, noWait bool, args map[string]interface{}) (<-chan Message, error)
 	Ack(id uint64, multiple bool) error
 	Nack(id uint64, multiple bool, requeue bool) error
 	Reject(id uint64, requeue bool) error

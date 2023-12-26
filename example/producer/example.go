@@ -53,7 +53,12 @@ func main() {
 		logging.Fatal(err.Error())
 	}
 
-	err = exampleBinding(ctx, producer)
+	err = exampleBindingFanout(ctx, producer)
+	if err != nil {
+		logging.Fatal(err.Error())
+	}
+
+	err = exampleBindingDirect(ctx, producer)
 	if err != nil {
 		logging.Fatal(err.Error())
 	}
@@ -90,7 +95,7 @@ func exampleQueue(ctx context.Context, producer rabbitmq.Producer) error {
 	return nil
 }
 
-func exampleBinding(ctx context.Context, producer rabbitmq.Producer) error {
+func exampleBindingFanout(ctx context.Context, producer rabbitmq.Producer) error {
 	err := producer.DeclareExchange("logs", "fanout", true, false, false, false, nil)
 	if err != nil {
 		return err
@@ -108,6 +113,31 @@ func exampleBinding(ctx context.Context, producer rabbitmq.Producer) error {
 	}
 
 	err = producer.Publish(ctx, "logs", "", dataBytes)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return nil
+}
+
+func exampleBindingDirect(ctx context.Context, producer rabbitmq.Producer) error {
+	err := producer.DeclareExchange("direct-queue-exchange", "direct", true, false, false, false, nil)
+	if err != nil {
+		return err
+	}
+
+	data := Data{
+		Name:    "name-test",
+		Surname: "surname-test",
+		Age:     300,
+	}
+
+	dataBytes, err := json.Marshal(data)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = producer.Publish(ctx, "direct-queue-exchange", "direct-queue", dataBytes)
 	if err != nil {
 		log.Fatal(err)
 	}
