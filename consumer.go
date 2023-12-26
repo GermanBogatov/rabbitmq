@@ -44,11 +44,11 @@ func NewRabbitMQConsumer(cfg ConsumerConfig) (Consumer, error) {
 	return consumer, nil
 }
 
-func (r *rabbitMQConsumer) Consume(target string) (<-chan Message, error) {
+func (r *rabbitMQConsumer) Consume(queue, consumer string, autoAck, exclusive, noLocal, noWait bool, args map[string]interface{}) (<-chan Message, error) {
 	if !r.Connected() {
 		return nil, errNotConnected
 	}
-	messages, err := r.consume(target)
+	messages, err := r.consume(queue, consumer, autoAck, exclusive, noLocal, noWait, args)
 	if err != nil {
 		return nil, fmt.Errorf("failed to consume messages due %v", err)
 	}
@@ -70,7 +70,7 @@ func (r *rabbitMQConsumer) Consume(target string) (<-chan Message, error) {
 			case <-r.reconnectCh:
 				logging.Info("start to reconsume messages")
 				for {
-					messages, err = r.consume(target)
+					messages, err = r.consume(queue, consumer, autoAck, exclusive, noLocal, noWait, args)
 					if err == nil {
 						break
 					}
@@ -87,20 +87,20 @@ func (r *rabbitMQConsumer) Consume(target string) (<-chan Message, error) {
 	return ch, nil
 }
 
-func (r *rabbitMQConsumer) consume(target string) (<-chan amqp.Delivery, error) {
+func (r *rabbitMQConsumer) consume(queue, consumer string, autoAck, exclusive, noLocal, noWait bool, args map[string]interface{}) (<-chan amqp.Delivery, error) {
 	err := r.ch.Qos(r.prefetchCount, 0, false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to set QoS due %v", err)
 	}
 
 	messages, err := r.ch.Consume(
-		target,
-		"",
-		false,
-		false,
-		false,
-		false,
-		nil,
+		queue,
+		consumer,
+		autoAck,
+		exclusive,
+		noLocal,
+		noWait,
+		args,
 	)
 	if err != nil {
 		return nil, err

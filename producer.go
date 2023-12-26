@@ -32,7 +32,7 @@ func NewRabbitMQProducer(cfg ProducerConfig) (Producer, error) {
 	return producer, nil
 }
 
-func (r *rabbitMQProducer) Publish(ctx context.Context, exchange, target string, body []byte) error {
+func (r *rabbitMQProducer) Publish(ctx context.Context, exchange, routingKey string, body []byte) error {
 	if !r.Connected() {
 		return errNotConnected
 	}
@@ -40,7 +40,7 @@ func (r *rabbitMQProducer) Publish(ctx context.Context, exchange, target string,
 	err := r.ch.PublishWithContext(
 		ctx,
 		exchange,
-		target,
+		routingKey,
 		false,
 		false,
 		amqp.Publishing{

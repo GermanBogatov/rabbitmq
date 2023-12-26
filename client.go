@@ -14,12 +14,12 @@ type MessageQueue interface {
 
 type Producer interface {
 	MessageQueue
-	Publish(ctx context.Context, exchange, target string, body []byte) error
+	Publish(ctx context.Context, exchange, routingKey string, body []byte) error
 }
 
 type Consumer interface {
 	MessageQueue
-	Consume(target string) (<-chan Message, error)
+	Consume(queue, consumer string, autoAck, exclusive, noLocal, noWait bool, args map[string]interface{}) (<-chan Message, error)
 	Ack(id uint64, multiple bool) error
 	Nack(id uint64, multiple bool, requeue bool) error
 	Reject(id uint64, requeue bool) error
