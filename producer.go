@@ -21,7 +21,7 @@ func NewRabbitMQProducer(cfg ProducerConfig) (Producer, error) {
 		},
 	}
 
-	addr := fmt.Sprintf("amqp://%s:%s@%s:%s/", cfg.Username, cfg.Password, cfg.Host, cfg.Port)
+	addr := fmt.Sprintf("amqp://%s:%s@%s:%s/%s", cfg.Username, cfg.Password, cfg.Host, cfg.Port, cfg.Vhost)
 	err := producer.connect(addr)
 	if err != nil {
 		return nil, err

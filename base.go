@@ -21,6 +21,7 @@ type BaseConfig struct {
 	Port     string
 	Username string
 	Password string
+	Vhost    string
 }
 
 const (

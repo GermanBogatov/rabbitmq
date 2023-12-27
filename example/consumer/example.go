@@ -61,6 +61,7 @@ func exampleQueue(wg *sync.WaitGroup) error {
 			Port:     "5672",
 			Username: "guest",
 			Password: "guest",
+			Vhost:    "icl_vhost",
 		},
 		Name: "name-consumer-1",
 	})
@@ -95,6 +96,7 @@ func exampleBindingFanout(wg *sync.WaitGroup) error {
 			Port:     "5672",
 			Username: "guest",
 			Password: "guest",
+			Vhost:    "icl_vhost",
 		},
 		Name: "name-consumer-2",
 	})
@@ -161,6 +163,7 @@ func exampleBindingDirect(wg *sync.WaitGroup) error {
 			Port:     "5672",
 			Username: "guest",
 			Password: "guest",
+			Vhost:    "icl_vhost",
 		},
 		Name: "name-consumer-3",
 	})

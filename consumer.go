@@ -36,7 +36,7 @@ func NewRabbitMQConsumer(cfg ConsumerConfig) (Consumer, error) {
 		},
 	}
 
-	addr := fmt.Sprintf("amqp://%s:%s@%s:%s/", cfg.Username, cfg.Password, cfg.Host, cfg.Port)
+	addr := fmt.Sprintf("amqp://%s:%s@%s:%s/%s", cfg.Username, cfg.Password, cfg.Host, cfg.Port, cfg.Vhost)
 	err := consumer.connect(addr)
 	if err != nil {
 		return nil, err

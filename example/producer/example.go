@@ -40,6 +40,7 @@ func main() {
 			Port:     "5672",
 			Username: "guest",
 			Password: "guest",
+			Vhost:    "icl_vhost",
 		},
 	})
 	if err != nil {
